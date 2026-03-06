@@ -1,1 +1,8 @@
-
+fastapi
+uvicorn
+pandas
+openpyxl
+sqlalchemy
+python-multipart
+jinja2
+alembic
