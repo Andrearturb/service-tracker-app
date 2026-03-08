@@ -115,29 +115,48 @@ def normalizar_status(
 ) -> str | None:
     """
     Define o status final enviado ao front.
-    """
 
+    Ordem de prioridade:
+    1. Completa -> quando status original for finalizado/concluído
+    2. Não aprovado -> quando status original for 'Não Aprovado'
+    3. Agendado -> quando houver fornecedor e data de visita
+    4. Em atendimento -> quando houver fornecedor ou status original for 'Em Atendimento'
+    5. BackLog -> quando status original for 'Em Aberto'
+    6. Caso contrário, mantém o status original
+    """
     status_limpo = normalizar_texto(status_original)
 
-    if supplier and visit_date:
-        return STATUS_AGENDADO
-
-    if supplier:
-        return STATUS_EM_ATENDIMENTO
-
     if status_limpo is None:
+        if supplier and visit_date:
+            return "Agendado"
+
+        if supplier:
+            return "Em atendimento"
+
         return None
 
     status_normalizado = status_limpo.lower().strip()
 
-    if status_normalizado in {"solicitação finalizada", "completa"}:
-        return STATUS_COMPLETA
+    if status_normalizado in {
+        "solicitação finalizada",
+        "solicitacao finalizada",
+        "chamado concluído",
+        "chamado concluido",
+        "completa",
+    }:
+        return "Completa"
 
-    if status_normalizado == "não aprovado":
-        return STATUS_NAO_APROVADO
+    if status_normalizado == "não aprovado" or status_normalizado == "nao aprovado":
+        return "Não aprovado"
+
+    if supplier and visit_date:
+        return "Agendado"
+
+    if supplier or status_normalizado == "em atendimento":
+        return "Em atendimento"
 
     if status_normalizado == "em aberto":
-        return STATUS_BACKLOG
+        return "BackLog"
 
     return status_limpo
 

@@ -6,16 +6,15 @@ e garante a criação das tabelas no banco de dados.
 """
 
 from fastapi import FastAPI
-from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
+from app.api.routes.health import router as health_router
 from app.api.routes.imports import router as imports_router
 from app.api.routes.services import router as services_router
 from app.core.config import APP_NAME, APP_VERSION
 from app.db.base import Base
 from app.db.session import engine
-from app.api.routes.health import router as health_router
-
 
 # Importa os models para que o SQLAlchemy reconheça as tabelas
 from app.models.service import Service  # noqa: F401
@@ -29,8 +28,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -43,7 +42,6 @@ app.add_middleware(
 )
 
 
-
 @app.on_event("startup")
 def on_startup() -> None:
     """
@@ -51,7 +49,7 @@ def on_startup() -> None:
     """
     Base.metadata.create_all(bind=engine)
 
+
 app.include_router(health_router)
 app.include_router(imports_router)
 app.include_router(services_router)
-
