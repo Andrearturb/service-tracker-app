@@ -27,7 +27,8 @@ def listar_servicos(db: Session = Depends(get_db)) -> ServiceListResponse:
 
     Regras:
     - os dados são ordenados por ticket;
-    - o campo upload_data traz a data da última importação realizada.
+    - o campo upload_data traz a data da última importação realizada;
+    - o campo pracas traz a lista única de praças disponíveis.
     """
     services = (
         db.query(Service)
@@ -60,9 +61,18 @@ def listar_servicos(db: Session = Depends(get_db)) -> ServiceListResponse:
         for service in services
     ]
 
+    pracas = sorted(
+        {
+            service.praca
+            for service in services
+            if service.praca
+        }
+    )
+
     upload_data = ultimo_upload.uploaded_at if ultimo_upload else None
 
     return ServiceListResponse(
         dados=dados,
         upload_data=upload_data,
+        pracas=pracas,
     )

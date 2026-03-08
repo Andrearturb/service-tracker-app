@@ -37,3 +37,4 @@ class ServiceListResponse(BaseModel):
 
     dados: list[ServiceItemResponse]
     upload_data: datetime | None
+    pracas: list[str]

@@ -13,6 +13,7 @@ Este módulo é responsável por:
 from __future__ import annotations
 import re
 
+
 import json
 from datetime import datetime
 from io import BytesIO
@@ -20,6 +21,13 @@ from io import BytesIO
 import pandas as pd
 from sqlalchemy.orm import Session
 
+from app.core.status import (
+    STATUS_BACKLOG,
+    STATUS_EM_ATENDIMENTO,
+    STATUS_AGENDADO,
+    STATUS_COMPLETA,
+    STATUS_NAO_APROVADO,
+)
 from app.models.service import Service
 from app.models.upload import Upload
 
@@ -106,37 +114,30 @@ def normalizar_status(
     visit_date: datetime | None,
 ) -> str | None:
     """
-    Define o status final que será enviado ao front.
-
-    Ordem de prioridade:
-    1. Agendado -> quando houver fornecedor e data de visita
-    2. Em atendimento -> quando houver fornecedor
-    3. Completa -> quando status original for 'Solicitação finalizada' ou 'Completa'
-    4. Não aprovado -> quando status original for 'Não aprovado'
-    5. BackLog -> quando status original for 'Em aberto'
-    6. Caso contrário, mantém o status original
+    Define o status final enviado ao front.
     """
+
     status_limpo = normalizar_texto(status_original)
 
     if supplier and visit_date:
-        return "Agendado"
+        return STATUS_AGENDADO
 
     if supplier:
-        return "Em atendimento"
+        return STATUS_EM_ATENDIMENTO
 
     if status_limpo is None:
         return None
 
-    status_normalizado = status_limpo.strip().lower()
+    status_normalizado = status_limpo.lower().strip()
 
     if status_normalizado in {"solicitação finalizada", "completa"}:
-        return "Completa"
+        return STATUS_COMPLETA
 
     if status_normalizado == "não aprovado":
-        return "Não aprovado"
+        return STATUS_NAO_APROVADO
 
     if status_normalizado == "em aberto":
-        return "BackLog"
+        return STATUS_BACKLOG
 
     return status_limpo
 
