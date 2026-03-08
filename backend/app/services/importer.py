@@ -264,7 +264,10 @@ def ler_planilha_excel(file_bytes: bytes) -> pd.DataFrame:
     return dataframe
 
 
-def montar_objeto_service(linha: pd.Series, upload_id: int) -> Service | None:
+def montar_objeto_service(
+    linha: dict[str, object],
+    upload_id: int,
+) -> Service | None:
     """
     Converte uma linha da planilha em um objeto Service.
 
@@ -280,13 +283,8 @@ def montar_objeto_service(linha: pd.Series, upload_id: int) -> Service | None:
     location_data = tratar_local_atendimento(linha.get("raw_location"))
     signature_data = tratar_status_assinatura(linha.get("raw_signature"))
 
-    # limpar fornecedor
     supplier = limpar_nome_fornecedor(linha.get("supplier"))
-
-    # converter data
     visit_date = converter_data(linha.get("visit_date"))
-
-    # calcular status final
     status = normalizar_status(
         status_original=linha.get("status"),
         supplier=supplier,
@@ -337,8 +335,9 @@ def importar_servicos(
     db.flush()
 
     services: list[Service] = []
+    registros = dataframe.to_dict(orient="records")
 
-    for _, linha in dataframe.iterrows():
+    for linha in registros:
         service = montar_objeto_service(linha, upload.id)
 
         if service is not None:
