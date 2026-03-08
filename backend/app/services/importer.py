@@ -11,6 +11,7 @@ Este módulo é responsável por:
 """
 
 from __future__ import annotations
+import re
 
 import json
 from datetime import datetime
@@ -74,6 +75,70 @@ def converter_data(valor: object) -> datetime | None:
 
     return data_convertida.to_pydatetime()
 
+def limpar_nome_fornecedor(valor: object) -> str | None:
+    """
+    Remove CPF ou CNPJ do nome do fornecedor.
+
+    Exemplos:
+    - 'Fornecedor XPTO - CNPJ: 12.345.678/0001-90' -> 'Fornecedor XPTO'
+    - 'Maria da Silva - CPF: 123.456.789-00' -> 'Maria da Silva'
+    """
+    texto = normalizar_texto(valor)
+
+    if texto is None:
+        return None
+
+    texto = re.sub(
+        r"\s*[-|/]*\s*(CPF|CNPJ)\s*:\s*[\d./-]+",
+        "",
+        texto,
+        flags=re.IGNORECASE,
+    )
+
+    texto = re.sub(r"\s{2,}", " ", texto).strip(" -|/")
+
+    return texto or None
+
+
+def normalizar_status(
+    status_original: object,
+    supplier: str | None,
+    visit_date: datetime | None,
+) -> str | None:
+    """
+    Define o status final que será enviado ao front.
+
+    Ordem de prioridade:
+    1. Agendado -> quando houver fornecedor e data de visita
+    2. Em atendimento -> quando houver fornecedor
+    3. Completa -> quando status original for 'Solicitação finalizada' ou 'Completa'
+    4. Não aprovado -> quando status original for 'Não aprovado'
+    5. BackLog -> quando status original for 'Em aberto'
+    6. Caso contrário, mantém o status original
+    """
+    status_limpo = normalizar_texto(status_original)
+
+    if supplier and visit_date:
+        return "Agendado"
+
+    if supplier:
+        return "Em atendimento"
+
+    if status_limpo is None:
+        return None
+
+    status_normalizado = status_limpo.strip().lower()
+
+    if status_normalizado in {"solicitação finalizada", "completa"}:
+        return "Completa"
+
+    if status_normalizado == "não aprovado":
+        return "Não aprovado"
+
+    if status_normalizado == "em aberto":
+        return "BackLog"
+
+    return status_limpo
 
 def tratar_local_atendimento(valor: object) -> dict[str, str | None]:
     """
@@ -215,16 +280,29 @@ def montar_objeto_service(linha: pd.Series, upload_id: int) -> Service | None:
     location_data = tratar_local_atendimento(linha.get("raw_location"))
     signature_data = tratar_status_assinatura(linha.get("raw_signature"))
 
+    # limpar fornecedor
+    supplier = limpar_nome_fornecedor(linha.get("supplier"))
+
+    # converter data
+    visit_date = converter_data(linha.get("visit_date"))
+
+    # calcular status final
+    status = normalizar_status(
+        status_original=linha.get("status"),
+        supplier=supplier,
+        visit_date=visit_date,
+    )
+
     return Service(
         ticket=ticket,
-        status=normalizar_texto(linha.get("status")),
+        status=status,
         store_name=location_data["store_name"],
         bpcs_number=location_data["bpcs_number"],
         sap_number=location_data["sap_number"],
         praca=normalizar_texto(linha.get("praca")),
         service_description=normalizar_texto(linha.get("service_description")),
-        supplier=normalizar_texto(linha.get("supplier")),
-        visit_date=converter_data(linha.get("visit_date")),
+        supplier=supplier,
+        visit_date=visit_date,
         solution_text=normalizar_texto(linha.get("solution_text")),
         signature_status=signature_data["signature_status"],
         signed_pdf_url=signature_data["signed_pdf_url"],
