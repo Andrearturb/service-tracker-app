@@ -52,21 +52,21 @@ function App() {
   // Senha digitada no login administrativo
   const [adminPassword, setAdminPassword] = useState("");
 
-  // Mensagem de retorno do login administrativo
+  // Mensagem exibida no modal de login
   const [loginMessage, setLoginMessage] = useState("");
 
-  // Estado visual do login
+  // Estado visual do botão de login
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Token administrativo salvo após login
+  // Token administrativo salvo na sessão do navegador
   const [adminToken, setAdminToken] = useState(
     sessionStorage.getItem("admin_token") || ""
   );
 
-  // Mensagem de retorno da importação
+  // Mensagem exibida no modal de importação
   const [importMessage, setImportMessage] = useState("");
 
-  // Estado visual para indicar importação em andamento
+  // Estado visual do botão de importação
   const [isImporting, setIsImporting] = useState(false);
 
   /**
@@ -97,7 +97,7 @@ function App() {
 
   /**
    * Filtra os serviços pela praça selecionada
-   * e pela busca exata de ticket, se houver.
+   * e também pelo ticket digitado, se houver.
    */
   const filteredServices = useMemo(() => {
     if (!selectedPraca) {
@@ -120,7 +120,7 @@ function App() {
 
   /**
    * Agrupa os serviços filtrados por status
-   * para montar as colunas do quadro.
+   * para montar as colunas do quadro Kanban.
    */
   const groupedServices = useMemo(() => {
     const groups = {};
@@ -155,7 +155,7 @@ function App() {
 
   /**
    * Ao selecionar uma praça:
-   * - salva a nova praça
+   * - salva a praça
    * - limpa a busca por ticket
    * - fecha o modal de detalhes
    */
@@ -166,7 +166,7 @@ function App() {
   }
 
   /**
-   * Limpa todos os filtros visuais do painel.
+   * Limpa todos os filtros visuais.
    */
   function handleClearFilters() {
     setSelectedPraca("");
@@ -193,7 +193,7 @@ function App() {
   /**
    * Faz login administrativo no backend.
    * Se a senha estiver correta, salva o token
-   * e abre automaticamente o modal de importação.
+   * e abre o modal de importação.
    */
   async function handleAdminLogin() {
     if (!adminPassword.trim()) {
@@ -221,15 +221,15 @@ function App() {
         throw new Error(data.detail || "Falha no login administrativo.");
       }
 
-      // Salva o token na sessão do navegador
+      // Salva o token na sessão
       sessionStorage.setItem("admin_token", data.token);
       setAdminToken(data.token);
 
-      // Limpa mensagens e senha digitada
-      setLoginMessage("");
+      // Limpa a senha digitada
       setAdminPassword("");
 
       // Fecha o login e abre a importação
+      setLoginMessage("");
       setIsLoginModalOpen(false);
       setIsImportModalOpen(true);
     } catch (error) {
@@ -276,13 +276,13 @@ function App() {
 
       setImportMessage("Planilha importada com sucesso.");
 
-      // Recarrega os dados do painel após a importação
+      // Atualiza os dados do painel após a importação
       await loadServicesData();
 
       // Limpa o arquivo selecionado
       setSelectedFile(null);
 
-      // Fecha detalhes abertos, se houver
+      // Fecha detalhes abertos
       setSelectedService(null);
     } catch (error) {
       setImportMessage(String(error.message || error));
@@ -294,8 +294,8 @@ function App() {
   /**
    * Abre a área administrativa.
    *
-   * Se já existir token salvo, abre direto o modal de importação.
-   * Caso contrário, abre o modal de login.
+   * Se já existir token salvo, abre direto a importação.
+   * Caso contrário, abre o login.
    */
   function handleOpenAdminArea() {
     if (adminToken) {
@@ -312,6 +312,8 @@ function App() {
         fontFamily: "Arial, sans-serif",
         backgroundColor: "#f8fafc",
         minHeight: "100vh",
+        width: "100%",
+        boxSizing: "border-box",
       }}
     >
       {/* Cabeçalho principal */}
@@ -323,6 +325,7 @@ function App() {
           gap: "16px",
           flexWrap: "wrap",
           marginBottom: "24px",
+          width: "100%",
         }}
       >
         <div>
@@ -354,7 +357,14 @@ function App() {
       <h2 style={{ marginBottom: "12px" }}>Selecione uma praça</h2>
 
       {/* Botões das praças */}
-      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "12px",
+          flexWrap: "wrap",
+          width: "100%",
+        }}
+      >
         {pracas.map((praca) => (
           <button
             key={praca}
@@ -372,7 +382,7 @@ function App() {
         ))}
       </div>
 
-      {/* Botão para limpar os filtros */}
+      {/* Botão para limpar filtros */}
       <div style={{ marginTop: "16px" }}>
         <button
           onClick={handleClearFilters}
@@ -410,6 +420,7 @@ function App() {
               borderRadius: "8px",
               border: "1px solid #ccc",
               fontSize: "14px",
+              boxSizing: "border-box",
             }}
           />
         </div>
@@ -417,7 +428,7 @@ function App() {
 
       {/* Área principal da praça selecionada */}
       {selectedPraca && (
-        <div style={{ marginTop: "16px" }}>
+        <div style={{ marginTop: "16px", width: "100%" }}>
           <h2 style={{ marginBottom: "8px" }}>Serviços de {selectedPraca}</h2>
 
           <p style={{ marginBottom: "24px", color: "#555" }}>
@@ -431,6 +442,7 @@ function App() {
               gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
               gap: "16px",
               marginBottom: "24px",
+              width: "100%",
             }}
           >
             {statusMetrics.map((item) => (
@@ -443,6 +455,7 @@ function App() {
                   border: "1px solid #e5e7eb",
                   borderLeft: `6px solid ${STATUS_COLORS[item.status]}`,
                   boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                  boxSizing: "border-box",
                 }}
               >
                 <p
@@ -473,10 +486,11 @@ function App() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(5, 280px)",
+              gridTemplateColumns: "repeat(5, minmax(260px, 1fr))",
               gap: "16px",
               alignItems: "start",
-              overflowX: "auto",
+              width: "100%",
+              boxSizing: "border-box",
             }}
           >
             {STATUS_ORDER.map((status) => {
@@ -490,9 +504,11 @@ function App() {
                     borderRadius: "12px",
                     padding: "12px",
                     border: "1px solid #e5e7eb",
-                    height: "70vh",
+                    minHeight: "70vh",
+                    maxHeight: "70vh",
                     overflowY: "auto",
                     borderTop: `6px solid ${STATUS_COLORS[status] || "#e5e7eb"}`,
+                    boxSizing: "border-box",
                   }}
                 >
                   <div style={{ display: "grid", gap: "12px" }}>
@@ -510,6 +526,8 @@ function App() {
                           overflowWrap: "anywhere",
                           wordBreak: "break-word",
                           whiteSpace: "normal",
+                          boxSizing: "border-box",
+                          width: "100%",
                         }}
                       >
                         <h4
