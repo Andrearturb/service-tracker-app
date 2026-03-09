@@ -2,7 +2,6 @@
 Rotas administrativas.
 
 Este módulo define a autenticação simples da área administrativa.
-No momento, o login valida uma senha fixa e devolve um token simples.
 """
 
 from fastapi import APIRouter, HTTPException, status
@@ -37,10 +36,7 @@ class AdminLoginResponse(BaseModel):
 )
 def admin_login(payload: AdminLoginRequest) -> AdminLoginResponse:
     """
-    Valida a senha administrativa.
-
-    Se a senha estiver correta, devolve um token simples que será
-    usado pelo front para autorizar a importação da planilha.
+    Valida a senha administrativa e devolve um token simples.
     """
     if payload.password != ADMIN_PASSWORD:
         raise HTTPException(

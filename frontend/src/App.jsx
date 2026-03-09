@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import ImportModal from "./components/ImportModal";
+import LoginAdminModal from "./components/LoginAdminModal";
 import ServiceDetailsModal from "./components/ServiceDetailsModal";
 
 // Ordem fixa das colunas do quadro
@@ -36,17 +37,31 @@ function App() {
   // Busca exata por ticket
   const [ticketSearch, setTicketSearch] = useState("");
 
-  // Serviço selecionado para exibir no modal
+  // Serviço selecionado para exibir no modal de detalhes
   const [selectedService, setSelectedService] = useState(null);
 
-  // Estado para abrir/fechar modal de importação
+  // Controle do modal de login administrativo
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // Controle do modal de importação
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Arquivo Excel selecionado para importação
   const [selectedFile, setSelectedFile] = useState(null);
 
-  // Senha administrativa para importar a planilha
-  const [importPassword, setImportPassword] = useState("");
+  // Senha digitada no login administrativo
+  const [adminPassword, setAdminPassword] = useState("");
+
+  // Mensagem de retorno do login administrativo
+  const [loginMessage, setLoginMessage] = useState("");
+
+  // Estado visual do login
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Token administrativo salvo após login
+  const [adminToken, setAdminToken] = useState(
+    sessionStorage.getItem("admin_token") || ""
+  );
 
   // Mensagem de retorno da importação
   const [importMessage, setImportMessage] = useState("");
@@ -54,7 +69,9 @@ function App() {
   // Estado visual para indicar importação em andamento
   const [isImporting, setIsImporting] = useState(false);
 
-  // Busca os dados no backend
+  /**
+   * Busca os dados públicos do painel no backend.
+   */
   async function loadServicesData() {
     const response = await fetch("http://127.0.0.1:8000/services");
 
@@ -69,15 +86,19 @@ function App() {
     setUploadDate(data.upload_data || null);
   }
 
-  // Carrega os dados da API quando a tela abre
+  /**
+   * Carrega os dados da API quando a tela abre.
+   */
   useEffect(() => {
     loadServicesData().catch((error) => {
       console.error("Erro ao buscar dados:", error);
     });
   }, []);
 
-  // Filtra os serviços pela praça selecionada
-  // e pela busca exata de ticket, se houver
+  /**
+   * Filtra os serviços pela praça selecionada
+   * e pela busca exata de ticket, se houver.
+   */
   const filteredServices = useMemo(() => {
     if (!selectedPraca) {
       return [];
@@ -93,10 +114,14 @@ function App() {
       );
     }
 
+    // Ordena os tickets do maior para o menor
     return resultado.sort((a, b) => Number(b.ticket) - Number(a.ticket));
   }, [services, selectedPraca, ticketSearch]);
 
-  // Agrupa os serviços por status para montar as colunas do quadro
+  /**
+   * Agrupa os serviços filtrados por status
+   * para montar as colunas do quadro.
+   */
   const groupedServices = useMemo(() => {
     const groups = {};
 
@@ -117,7 +142,10 @@ function App() {
     return groups;
   }, [filteredServices]);
 
-  // Gera os cards de métricas do topo
+  /**
+   * Gera as métricas do topo com base
+   * na quantidade de serviços por status.
+   */
   const statusMetrics = useMemo(() => {
     return STATUS_ORDER.map((status) => ({
       status,
@@ -125,38 +153,103 @@ function App() {
     }));
   }, [groupedServices]);
 
-  // Ao selecionar uma praça:
-  // - salva a nova praça
-  // - limpa a busca por ticket
-  // - fecha o modal de detalhes
+  /**
+   * Ao selecionar uma praça:
+   * - salva a nova praça
+   * - limpa a busca por ticket
+   * - fecha o modal de detalhes
+   */
   function handleSelectPraca(praca) {
     setSelectedPraca(praca);
     setTicketSearch("");
     setSelectedService(null);
   }
 
-  // Limpa todos os filtros visuais
+  /**
+   * Limpa todos os filtros visuais do painel.
+   */
   function handleClearFilters() {
     setSelectedPraca("");
     setTicketSearch("");
     setSelectedService(null);
   }
 
-  // Fecha o modal de importação e limpa mensagens visuais
+  /**
+   * Fecha o modal de login e limpa a mensagem.
+   */
+  function handleCloseLoginModal() {
+    setIsLoginModalOpen(false);
+    setLoginMessage("");
+  }
+
+  /**
+   * Fecha o modal de importação e limpa a mensagem.
+   */
   function handleCloseImportModal() {
     setIsImportModalOpen(false);
     setImportMessage("");
   }
 
-  // Envia a planilha para o backend
+  /**
+   * Faz login administrativo no backend.
+   * Se a senha estiver correta, salva o token
+   * e abre automaticamente o modal de importação.
+   */
+  async function handleAdminLogin() {
+    if (!adminPassword.trim()) {
+      setLoginMessage("Informe a senha administrativa.");
+      return;
+    }
+
+    try {
+      setIsLoggingIn(true);
+      setLoginMessage("Validando acesso...");
+
+      const response = await fetch("http://127.0.0.1:8000/admin/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          password: adminPassword.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Falha no login administrativo.");
+      }
+
+      // Salva o token na sessão do navegador
+      sessionStorage.setItem("admin_token", data.token);
+      setAdminToken(data.token);
+
+      // Limpa mensagens e senha digitada
+      setLoginMessage("");
+      setAdminPassword("");
+
+      // Fecha o login e abre a importação
+      setIsLoginModalOpen(false);
+      setIsImportModalOpen(true);
+    } catch (error) {
+      setLoginMessage(String(error.message || error));
+    } finally {
+      setIsLoggingIn(false);
+    }
+  }
+
+  /**
+   * Envia a planilha para o backend usando o token administrativo.
+   */
   async function handleImportFile() {
     if (!selectedFile) {
       setImportMessage("Selecione um arquivo antes de importar.");
       return;
     }
 
-    if (!importPassword.trim()) {
-      setImportMessage("Informe a senha de importação.");
+    if (!adminToken) {
+      setImportMessage("Acesso administrativo não autorizado.");
       return;
     }
 
@@ -170,7 +263,7 @@ function App() {
       const response = await fetch("http://127.0.0.1:8000/imports/excel", {
         method: "POST",
         headers: {
-          "import-password": importPassword.trim(),
+          Authorization: `Bearer ${adminToken}`,
         },
         body: formData,
       });
@@ -182,14 +275,33 @@ function App() {
       }
 
       setImportMessage("Planilha importada com sucesso.");
+
+      // Recarrega os dados do painel após a importação
       await loadServicesData();
 
+      // Limpa o arquivo selecionado
       setSelectedFile(null);
+
+      // Fecha detalhes abertos, se houver
       setSelectedService(null);
     } catch (error) {
       setImportMessage(String(error.message || error));
     } finally {
       setIsImporting(false);
+    }
+  }
+
+  /**
+   * Abre a área administrativa.
+   *
+   * Se já existir token salvo, abre direto o modal de importação.
+   * Caso contrário, abre o modal de login.
+   */
+  function handleOpenAdminArea() {
+    if (adminToken) {
+      setIsImportModalOpen(true);
+    } else {
+      setIsLoginModalOpen(true);
     }
   }
 
@@ -224,7 +336,7 @@ function App() {
         </div>
 
         <button
-          onClick={() => setIsImportModalOpen(true)}
+          onClick={handleOpenAdminArea}
           style={{
             padding: "10px 16px",
             borderRadius: "8px",
@@ -235,7 +347,7 @@ function App() {
             fontWeight: "bold",
           }}
         >
-          Importar planilha
+          Área administrativa
         </button>
       </div>
 
@@ -398,8 +510,6 @@ function App() {
                           overflowWrap: "anywhere",
                           wordBreak: "break-word",
                           whiteSpace: "normal",
-                          transition:
-                            "transform 0.2s ease, box-shadow 0.2s ease",
                         }}
                       >
                         <h4
@@ -439,14 +549,23 @@ function App() {
         </div>
       )}
 
+      {/* Modal de login administrativo */}
+      <LoginAdminModal
+        isOpen={isLoginModalOpen}
+        onClose={handleCloseLoginModal}
+        password={adminPassword}
+        onPasswordChange={setAdminPassword}
+        onLogin={handleAdminLogin}
+        loginMessage={loginMessage}
+        isLoggingIn={isLoggingIn}
+      />
+
       {/* Modal de importação */}
       <ImportModal
         isOpen={isImportModalOpen}
         onClose={handleCloseImportModal}
         selectedFile={selectedFile}
         onFileChange={setSelectedFile}
-        importPassword={importPassword}
-        onPasswordChange={setImportPassword}
         onImport={handleImportFile}
         importMessage={importMessage}
         isImporting={isImporting}

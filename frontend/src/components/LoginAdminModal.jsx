@@ -1,11 +1,11 @@
-function ImportModal({
+function LoginAdminModal({
   isOpen,
   onClose,
-  selectedFile,
-  onFileChange,
-  onImport,
-  importMessage,
-  isImporting,
+  password,
+  onPasswordChange,
+  onLogin,
+  loginMessage,
+  isLoggingIn,
 }) {
   // Se o modal estiver fechado, não renderiza nada
   if (!isOpen) {
@@ -24,7 +24,7 @@ function ImportModal({
         alignItems: "center",
         justifyContent: "center",
         padding: "24px",
-        zIndex: 1100,
+        zIndex: 1200,
       }}
     >
       <div
@@ -32,7 +32,7 @@ function ImportModal({
         onClick={(event) => event.stopPropagation()}
         style={{
           width: "100%",
-          maxWidth: "520px",
+          maxWidth: "420px",
           backgroundColor: "#ffffff",
           borderRadius: "16px",
           padding: "24px",
@@ -47,7 +47,7 @@ function ImportModal({
             marginBottom: "20px",
           }}
         >
-          <h2 style={{ margin: 0 }}>Importar planilha</h2>
+          <h2 style={{ margin: 0 }}>Área administrativa</h2>
 
           <button
             onClick={onClose}
@@ -65,57 +65,57 @@ function ImportModal({
         </div>
 
         <p style={{ marginTop: 0, marginBottom: "16px", color: "#6b7280" }}>
-          Selecione a planilha Excel para atualizar o painel.
+          Informe a senha para acessar a área de importação.
         </p>
 
         <div style={{ display: "grid", gap: "16px" }}>
           <div>
             <label
-              htmlFor="import-file"
+              htmlFor="admin-password"
               style={{
                 display: "block",
                 marginBottom: "8px",
                 fontWeight: "bold",
               }}
             >
-              Arquivo Excel
+              Senha
             </label>
 
             <input
-              id="import-file"
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={(event) => {
-                const file = event.target.files?.[0] || null;
-                onFileChange(file);
+              id="admin-password"
+              type="password"
+              value={password}
+              onChange={(event) => onPasswordChange(event.target.value)}
+              placeholder="Digite a senha administrativa"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+                fontSize: "14px",
+                boxSizing: "border-box",
               }}
             />
           </div>
 
-          {selectedFile && (
-            <p style={{ margin: 0, color: "#374151" }}>
-              Arquivo selecionado: <strong>{selectedFile.name}</strong>
-            </p>
-          )}
-
           <button
-            onClick={onImport}
-            disabled={isImporting}
+            onClick={onLogin}
+            disabled={isLoggingIn}
             style={{
               padding: "12px 16px",
               borderRadius: "8px",
               border: "none",
-              backgroundColor: isImporting ? "#93c5fd" : "#2563eb",
+              backgroundColor: isLoggingIn ? "#93c5fd" : "#2563eb",
               color: "#ffffff",
-              cursor: isImporting ? "not-allowed" : "pointer",
+              cursor: isLoggingIn ? "not-allowed" : "pointer",
               fontWeight: "bold",
             }}
           >
-            {isImporting ? "Importando..." : "Importar planilha"}
+            {isLoggingIn ? "Entrando..." : "Entrar"}
           </button>
 
-          {importMessage && (
-            <p style={{ margin: 0, color: "#374151" }}>{importMessage}</p>
+          {loginMessage && (
+            <p style={{ margin: 0, color: "#374151" }}>{loginMessage}</p>
           )}
         </div>
       </div>
@@ -123,4 +123,4 @@ function ImportModal({
   );
 }
 
-export default ImportModal;
+export default LoginAdminModal;

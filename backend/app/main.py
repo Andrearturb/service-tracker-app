@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
+from app.api.routes.admin import router as admin_router
 from app.api.routes.health import router as health_router
 from app.api.routes.imports import router as imports_router
 from app.api.routes.services import router as services_router
@@ -20,11 +21,13 @@ from app.db.session import engine
 from app.models.service import Service  # noqa: F401
 from app.models.upload import Upload  # noqa: F401
 
+# Instância principal da aplicação
 app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
 )
 
+# Libera acesso do front local ao backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -36,6 +39,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Comprime respostas grandes
 app.add_middleware(
     GZipMiddleware,
     minimum_size=1000,
@@ -50,6 +54,8 @@ def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
 
 
+# Registro das rotas da aplicação
+app.include_router(admin_router)
 app.include_router(health_router)
 app.include_router(imports_router)
 app.include_router(services_router)

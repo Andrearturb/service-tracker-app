@@ -3,12 +3,13 @@ Rotas relacionadas à importação de planilhas.
 
 Este módulo define a rota responsável por receber um arquivo Excel,
 executar a importação dos dados e devolver um resumo do processo.
+A importação é protegida por autenticação administrativa.
 """
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.core.config import IMPORT_ADMIN_PASSWORD
+from app.core.config import ADMIN_TOKEN
 from app.db.session import get_db
 from app.schemas.upload import UploadResponse
 from app.services.importer import importar_servicos
@@ -16,22 +17,33 @@ from app.services.importer import importar_servicos
 router = APIRouter(prefix="/imports", tags=["Imports"])
 
 
-def validar_senha_importacao(import_password: str | None) -> None:
+def validar_token_admin(authorization: str | None) -> None:
     """
-    Valida a senha administrativa da importação.
+    Valida o token administrativo enviado no header Authorization.
 
-    Se a senha estiver ausente ou incorreta, a requisição é bloqueada.
+    Formato esperado:
+    Authorization: Bearer <token>
     """
-    if not import_password:
+    if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Senha de importação não informada.",
+            detail="Token administrativo não informado.",
         )
 
-    if import_password != IMPORT_ADMIN_PASSWORD:
+    prefix = "Bearer "
+
+    if not authorization.startswith(prefix):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Senha de importação inválida.",
+            detail="Formato do token inválido.",
+        )
+
+    token = authorization[len(prefix):].strip()
+
+    if token != ADMIN_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token administrativo inválido.",
         )
 
 
@@ -42,7 +54,7 @@ def validar_senha_importacao(import_password: str | None) -> None:
 )
 async def importar_planilha_excel(
     file: UploadFile = File(...),
-    import_password: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
     db: Session = Depends(get_db),
 ) -> UploadResponse:
     """
@@ -50,11 +62,11 @@ async def importar_planilha_excel(
 
     Regras:
     - aceita arquivos .xlsx e .xls;
-    - exige senha administrativa no header 'import-password';
+    - exige token administrativo no header Authorization;
     - lê o conteúdo do arquivo;
     - delega o tratamento e a persistência para o serviço de importação.
     """
-    validar_senha_importacao(import_password)
+    validar_token_admin(authorization)
 
     if not file.filename:
         raise HTTPException(
