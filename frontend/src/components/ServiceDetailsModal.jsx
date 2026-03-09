@@ -97,7 +97,9 @@ function ServiceDetailsModal({ service, onClose }) {
         </div>
 
         <div style={{ marginBottom: "24px" }}>
-          <h3 style={{ marginBottom: "8px" }}>Descrição do serviço</h3>
+          <h3 style={{ marginBottom: "8px", color: "#1f2937" }}>
+            Descrição do serviço
+          </h3>
           <div
             style={{
               backgroundColor: "#f9fafb",
@@ -105,6 +107,8 @@ function ServiceDetailsModal({ service, onClose }) {
               borderRadius: "10px",
               padding: "16px",
               lineHeight: "1.6",
+              overflowWrap: "anywhere",
+              wordBreak: "break-word",
             }}
           >
             {service.service_description || "-"}
@@ -112,7 +116,9 @@ function ServiceDetailsModal({ service, onClose }) {
         </div>
 
         <div style={{ marginBottom: "24px" }}>
-          <h3 style={{ marginBottom: "8px" }}>Solução</h3>
+          <h3 style={{ marginBottom: "8px", color: "#1f2937" }}>
+            Solução
+          </h3>
           <div
             style={{
               backgroundColor: "#f9fafb",
@@ -120,6 +126,8 @@ function ServiceDetailsModal({ service, onClose }) {
               borderRadius: "10px",
               padding: "16px",
               lineHeight: "1.6",
+              overflowWrap: "anywhere",
+              wordBreak: "break-word",
             }}
           >
             {service.solution_text || "-"}
@@ -127,7 +135,10 @@ function ServiceDetailsModal({ service, onClose }) {
         </div>
 
         <div>
-          <h3 style={{ marginBottom: "8px" }}>Assinatura</h3>
+          <h3 style={{ marginBottom: "8px", color: "#1f2937" }}>
+            Assinatura
+          </h3>
+
           <p>
             <strong>Status da assinatura:</strong>{" "}
             {service.signature_status || "-"}

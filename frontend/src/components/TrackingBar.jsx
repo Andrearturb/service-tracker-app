@@ -3,7 +3,6 @@ const REJECTED_FLOW = ["BackLog", "Não aprovado"];
 
 function TrackingBar({ status }) {
   const flow = status === "Não aprovado" ? REJECTED_FLOW : DEFAULT_FLOW;
-
   const currentIndex = flow.indexOf(status);
 
   return (
