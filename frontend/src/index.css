@@ -49,6 +49,18 @@ button {
 button:hover {
   border-color: #646cff;
 }
+
+.btn-secondary {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background-color: #ffffff;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background-color: #f0f0f0;
+}
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;

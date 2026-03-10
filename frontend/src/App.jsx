@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import AdvancedFiltersModal from "./components/AdvancedFiltersModal";
 import ImportModal from "./components/ImportModal";
 import LoginAdminModal from "./components/LoginAdminModal";
 import ServiceDetailsModal from "./components/ServiceDetailsModal";
@@ -34,8 +35,17 @@ function App() {
   // Praça selecionada pelo usuário
   const [selectedPraca, setSelectedPraca] = useState("");
 
-  // Busca exata por ticket
-  const [ticketSearch, setTicketSearch] = useState("");
+  // Quick filter por status, ativado ao clicar nas métricas
+  const [quickStatusFilter, setQuickStatusFilter] = useState("");
+
+  // Controle do modal de filtros avançados
+  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+
+  // Filtros em edição dentro do modal
+  const [advancedFiltersDraft, setAdvancedFiltersDraft] = useState([]);
+
+  // Filtros efetivamente aplicados
+  const [advancedFiltersApplied, setAdvancedFiltersApplied] = useState([]);
 
   // Serviço selecionado para exibir no modal de detalhes
   const [selectedService, setSelectedService] = useState(null);
@@ -70,6 +80,26 @@ function App() {
   const [isImporting, setIsImporting] = useState(false);
 
   /**
+   * Converte qualquer valor em texto minúsculo
+   * para facilitar comparações.
+   */
+  function normalizeText(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  /**
+   * Gera um filtro vazio novo para o modal.
+   */
+  function createEmptyAdvancedFilter() {
+    return {
+      id: `${Date.now()}-${Math.random()}`,
+      field: "ticket",
+      operator: "equals",
+      value: "",
+    };
+  }
+
+  /**
    * Busca os dados públicos do painel no backend.
    */
   async function loadServicesData() {
@@ -96,8 +126,54 @@ function App() {
   }, []);
 
   /**
+   * Aplica os filtros avançados sobre um conjunto de serviços.
+   * Todos são aplicados com AND.
+   */
+  function applyAdvancedFilters(data) {
+    if (!advancedFiltersApplied.length) {
+      return data;
+    }
+
+    return data.filter((service) => {
+      return advancedFiltersApplied.every((filter) => {
+        const rawValue = service[filter.field];
+        const serviceValue = normalizeText(rawValue);
+
+        // Operador "qualquer um desses"
+        if (filter.operator === "any_of") {
+          const values = Array.isArray(filter.value) ? filter.value : [];
+
+          if (!values.length) {
+            return true;
+          }
+
+          return values.some(
+            (value) => serviceValue === normalizeText(value)
+          );
+        }
+
+        const filterValue = normalizeText(filter.value);
+
+        if (!filterValue) {
+          return true;
+        }
+
+        if (filter.operator === "equals") {
+          return serviceValue === filterValue;
+        }
+
+        if (filter.operator === "contains") {
+          return serviceValue.includes(filterValue);
+        }
+
+        return true;
+      });
+    });
+  }
+
+  /**
    * Filtra os serviços pela praça selecionada
-   * e também pelo ticket digitado, se houver.
+   * e também pelos filtros adicionais.
    */
   const filteredServices = useMemo(() => {
     if (!selectedPraca) {
@@ -108,15 +184,19 @@ function App() {
       (service) => service.praca === selectedPraca
     );
 
-    if (ticketSearch.trim()) {
+    // Quick filter por status vindo das métricas
+    if (quickStatusFilter) {
       resultado = resultado.filter(
-        (service) => String(service.ticket) === ticketSearch.trim()
+        (service) => service.status === quickStatusFilter
       );
     }
 
+    // Filtros avançados aplicados
+    resultado = applyAdvancedFilters(resultado);
+
     // Ordena os tickets do maior para o menor
     return resultado.sort((a, b) => Number(b.ticket) - Number(a.ticket));
-  }, [services, selectedPraca, ticketSearch]);
+  }, [services, selectedPraca, quickStatusFilter, advancedFiltersApplied]);
 
   /**
    * Agrupa os serviços filtrados por status
@@ -144,7 +224,7 @@ function App() {
 
   /**
    * Gera as métricas do topo com base
-   * na quantidade de serviços por status.
+   * na quantidade de serviços por status filtrados pela praça.
    */
   const statusMetrics = useMemo(() => {
     return STATUS_ORDER.map((status) => ({
@@ -154,14 +234,58 @@ function App() {
   }, [groupedServices]);
 
   /**
+   * Conta quantos filtros estão ativos no momento.
+   * Considera:
+   * - quick filter por status
+   * - filtros avançados aplicados
+   */
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+
+    if (quickStatusFilter) {
+      count += 1;
+    }
+
+    count += advancedFiltersApplied.length;
+
+    return count;
+  }, [quickStatusFilter, advancedFiltersApplied]);
+
+  /**
+   * Gera métricas gerais antes de selecionar a praça.
+   */
+  const globalStatusMetrics = useMemo(() => {
+    const counts = {};
+
+    STATUS_ORDER.forEach((status) => {
+      counts[status] = 0;
+    });
+
+    services.forEach((service) => {
+      const status = service.status;
+
+      if (counts[status] !== undefined) {
+        counts[status] += 1;
+      }
+    });
+
+    return STATUS_ORDER.map((status) => ({
+      status,
+      total: counts[status] || 0,
+    }));
+  }, [services]);
+
+  /**
    * Ao selecionar uma praça:
    * - salva a praça
-   * - limpa a busca por ticket
+   * - limpa os filtros
    * - fecha o modal de detalhes
    */
   function handleSelectPraca(praca) {
     setSelectedPraca(praca);
-    setTicketSearch("");
+    setQuickStatusFilter("");
+    setAdvancedFiltersDraft([]);
+    setAdvancedFiltersApplied([]);
     setSelectedService(null);
   }
 
@@ -170,8 +294,157 @@ function App() {
    */
   function handleClearFilters() {
     setSelectedPraca("");
-    setTicketSearch("");
+    setQuickStatusFilter("");
+    setAdvancedFiltersDraft([]);
+    setAdvancedFiltersApplied([]);
     setSelectedService(null);
+  }
+
+  /**
+   * Limpa os filtros internos da praça selecionada.
+   */
+  function handleClearSearchFilters() {
+    setQuickStatusFilter("");
+    setAdvancedFiltersDraft([]);
+    setAdvancedFiltersApplied([]);
+  }
+
+  /**
+   * Liga ou desliga o quick filter de status
+   * ao clicar nas métricas.
+   */
+  function handleQuickStatusFilter(status) {
+    setQuickStatusFilter((current) => (current === status ? "" : status));
+  }
+
+  /**
+   * Abre o modal de filtros avançados.
+   * Se não houver rascunho, inicia com os filtros aplicados atuais
+   * ou com uma linha vazia.
+   */
+  function handleOpenAdvancedFilters() {
+    if (advancedFiltersApplied.length > 0) {
+      setAdvancedFiltersDraft(advancedFiltersApplied);
+    } else if (advancedFiltersDraft.length === 0) {
+      setAdvancedFiltersDraft([createEmptyAdvancedFilter()]);
+    }
+
+    setIsAdvancedFiltersOpen(true);
+  }
+
+  /**
+   * Fecha o modal de filtros avançados.
+   */
+  function handleCloseAdvancedFilters() {
+    setIsAdvancedFiltersOpen(false);
+  }
+
+  /**
+   * Altera uma propriedade de um filtro do modal.
+   * Se o campo mudar, ajusta operador/valor para evitar inconsistências.
+   */
+  function handleChangeAdvancedFilter(filterId, key, value) {
+    setAdvancedFiltersDraft((current) =>
+      current.map((filter) => {
+        if (filter.id !== filterId) {
+          return filter;
+        }
+
+        // Se mudar o campo, resetamos operador/valor de forma coerente
+        if (key === "field") {
+          if (value === "status") {
+            return {
+              ...filter,
+              field: value,
+              operator: "equals",
+              value: "",
+            };
+          }
+
+          if (value === "ticket") {
+            return {
+              ...filter,
+              field: value,
+              operator: "equals",
+              value: "",
+            };
+          }
+
+          return {
+            ...filter,
+            field: value,
+            operator: "contains",
+            value: "",
+          };
+        }
+
+        // Se mudar o operador para any_of, o valor vira array
+        if (key === "operator" && value === "any_of") {
+          return {
+            ...filter,
+            operator: value,
+            value: [],
+          };
+        }
+
+        // Se sair de any_of, voltamos o valor para string
+        if (key === "operator" && value !== "any_of") {
+          return {
+            ...filter,
+            operator: value,
+            value: "",
+          };
+        }
+
+        return {
+          ...filter,
+          [key]: value,
+        };
+      })
+    );
+  }
+
+  /**
+   * Adiciona uma nova linha de filtro no modal.
+   */
+  function handleAddAdvancedFilter() {
+    setAdvancedFiltersDraft((current) => [
+      ...current,
+      createEmptyAdvancedFilter(),
+    ]);
+  }
+
+  /**
+   * Remove uma linha de filtro do modal.
+   */
+  function handleRemoveAdvancedFilter(filterId) {
+    setAdvancedFiltersDraft((current) =>
+      current.filter((filter) => filter.id !== filterId)
+    );
+  }
+
+  /**
+   * Limpa os filtros do modal.
+   */
+  function handleClearAdvancedFilters() {
+    setAdvancedFiltersDraft([]);
+    setAdvancedFiltersApplied([]);
+  }
+
+  /**
+   * Aplica os filtros do modal que tenham valor preenchido.
+   */
+  function handleApplyAdvancedFilters() {
+    const validFilters = advancedFiltersDraft.filter((filter) => {
+      if (filter.operator === "any_of") {
+        return Array.isArray(filter.value) && filter.value.length > 0;
+      }
+
+      return String(filter.value || "").trim() !== "";
+    });
+
+    setAdvancedFiltersApplied(validFilters);
+    setIsAdvancedFiltersOpen(false);
   }
 
   /**
@@ -221,14 +494,9 @@ function App() {
         throw new Error(data.detail || "Falha no login administrativo.");
       }
 
-      // Salva o token na sessão
       sessionStorage.setItem("admin_token", data.token);
       setAdminToken(data.token);
-
-      // Limpa a senha digitada
       setAdminPassword("");
-
-      // Fecha o login e abre a importação
       setLoginMessage("");
       setIsLoginModalOpen(false);
       setIsImportModalOpen(true);
@@ -275,14 +543,8 @@ function App() {
       }
 
       setImportMessage("Planilha importada com sucesso.");
-
-      // Atualiza os dados do painel após a importação
       await loadServicesData();
-
-      // Limpa o arquivo selecionado
       setSelectedFile(null);
-
-      // Fecha detalhes abertos
       setSelectedService(null);
     } catch (error) {
       setImportMessage(String(error.message || error));
@@ -293,7 +555,6 @@ function App() {
 
   /**
    * Abre a área administrativa.
-   *
    * Se já existir token salvo, abre direto a importação.
    * Caso contrário, abre o login.
    */
@@ -303,6 +564,33 @@ function App() {
     } else {
       setIsLoginModalOpen(true);
     }
+  }
+
+  /**
+   * Gera um rótulo amigável para exibir os filtros aplicados.
+   */
+  function formatAdvancedFilterLabel(filter) {
+    const fieldLabels = {
+      ticket: "Ticket",
+      bpcs_number: "BPCS",
+      sap_number: "SAP",
+      store_name: "Loja",
+      status: "Status",
+    };
+
+    const operatorLabels = {
+      equals: "igual a",
+      contains: "contém",
+      any_of: "qualquer um desses",
+    };
+
+    const valueLabel = Array.isArray(filter.value)
+      ? filter.value.join(", ")
+      : filter.value;
+
+    return `${fieldLabels[filter.field] || filter.field} ${
+      operatorLabels[filter.operator] || filter.operator
+    } ${valueLabel}`;
   }
 
   return (
@@ -382,70 +670,167 @@ function App() {
         ))}
       </div>
 
-      {/* Botão para limpar filtros */}
-      <div style={{ marginTop: "16px" }}>
+      {/* Botões principais */}
+      <div style={{ marginTop: "16px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
         <button
           onClick={handleClearFilters}
-          style={{
-            padding: "10px 16px",
-            borderRadius: "8px",
-            border: "1px solid #ccc",
-            backgroundColor: "#ffffff",
-            cursor: "pointer",
-          }}
+          className="btn-secondary"
         >
           Limpar filtros
         </button>
+
+        {selectedPraca && (
+          <>
+            <button
+              onClick={handleOpenAdvancedFilters}
+              style={{
+                padding: "10px 16px",
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+                backgroundColor: "#ffffff",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "10px",
+                fontWeight: "500",
+              }}
+            >
+              <span>Filtros avançados</span>
+
+              {activeFiltersCount > 0 && (
+                <span
+                  style={{
+                    minWidth: "22px",
+                    height: "22px",
+                    padding: "0 6px",
+                    borderRadius: "999px",
+                    backgroundColor: "#2563eb",
+                    color: "#ffffff",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    lineHeight: 1,
+                  }}
+                >
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={handleClearSearchFilters}
+              className="btn-secondary"
+            >
+              Limpar filtros desta praça
+            </button>
+          </>
+        )}
       </div>
 
-      {/* Campo de busca por ticket */}
-      {selectedPraca && (
-        <div style={{ marginTop: "20px", marginBottom: "24px" }}>
-          <label
-            htmlFor="ticket-search"
-            style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}
-          >
-            Buscar ticket
-          </label>
+      {/* Resumo dos filtros aplicados */}
+      {selectedPraca &&
+        (advancedFiltersApplied.length > 0 || quickStatusFilter) && (
+          <div style={{ marginTop: "16px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            {quickStatusFilter && (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 12px",
+                  borderRadius: "999px",
+                  backgroundColor: "#ffffff",
+                  border: "1px solid #d1d5db",
+                  fontSize: "14px",
+                }}
+              >
+                Quick filter: <strong>{quickStatusFilter}</strong>
+                <button
+                  onClick={() => setQuickStatusFilter("")}
+                  style={{
+                    border: "none",
+                    backgroundColor: "transparent",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                  }}
+                >
+                  ✕
+                </button>
+              </span>
+            )}
 
-          <input
-            id="ticket-search"
-            type="text"
-            value={ticketSearch}
-            onChange={(event) => setTicketSearch(event.target.value)}
-            placeholder="Digite o número do ticket"
+            {advancedFiltersApplied.map((filter) => (
+              <span
+                key={filter.id}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 12px",
+                  borderRadius: "999px",
+                  backgroundColor: "#ffffff",
+                  border: "1px solid #d1d5db",
+                  fontSize: "14px",
+                }}
+              >
+                {formatAdvancedFilterLabel(filter)}
+
+                <button
+                  onClick={() =>
+                    setAdvancedFiltersApplied((current) =>
+                      current.filter((item) => item.id !== filter.id)
+                    )
+                  }
+                  style={{
+                    border: "none",
+                    backgroundColor: "transparent",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                    fontSize: "14px",
+                  }}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+      {/* Painel padrão antes de selecionar praça */}
+      {!selectedPraca && (
+        <div style={{ marginTop: "24px", width: "100%" }}>
+          <div
             style={{
-              width: "280px",
-              padding: "10px 12px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              fontSize: "14px",
+              backgroundColor: "#ffffff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "16px",
+              padding: "24px",
+              marginBottom: "24px",
               boxSizing: "border-box",
             }}
-          />
-        </div>
-      )}
+          >
+            <h2 style={{ marginTop: 0, marginBottom: "12px" }}>
+              Visão geral do painel
+            </h2>
 
-      {/* Área principal da praça selecionada */}
-      {selectedPraca && (
-        <div style={{ marginTop: "16px", width: "100%" }}>
-          <h2 style={{ marginBottom: "8px" }}>Serviços de {selectedPraca}</h2>
+            <p style={{ margin: 0, color: "#555", lineHeight: "1.6" }}>
+              Selecione uma praça para visualizar os chamados no quadro Kanban.
+              Enquanto isso, abaixo está o resumo geral de todos os serviços
+              importados no sistema.
+            </p>
+          </div>
 
-          <p style={{ marginBottom: "24px", color: "#555" }}>
-            Total de serviços: {filteredServices.length}
-          </p>
-
-          {/* Métricas por status */}
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
               gap: "16px",
-              marginBottom: "24px",
               width: "100%",
             }}
           >
-            {statusMetrics.map((item) => (
+            {globalStatusMetrics.map((item) => (
               <div
                 key={item.status}
                 style={{
@@ -480,6 +865,76 @@ function App() {
                 </h3>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Área principal da praça selecionada */}
+      {selectedPraca && (
+        <div style={{ marginTop: "16px", width: "100%" }}>
+          <h2 style={{ marginBottom: "8px" }}>Serviços de {selectedPraca}</h2>
+
+          <p style={{ marginBottom: "24px", color: "#555" }}>
+            Total de serviços: {filteredServices.length}
+          </p>
+
+          {/* Métricas por status transformadas em quick filters */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: "16px",
+              marginBottom: "24px",
+              width: "100%",
+            }}
+          >
+            {statusMetrics.map((item) => {
+              const isActive = quickStatusFilter === item.status;
+
+              return (
+                <div
+                  key={item.status}
+                  onClick={() => handleQuickStatusFilter(item.status)}
+                  style={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: "14px",
+                    padding: "18px",
+                    border: isActive
+                      ? `2px solid ${STATUS_COLORS[item.status]}`
+                      : "1px solid #e5e7eb",
+                    borderLeft: `6px solid ${STATUS_COLORS[item.status]}`,
+                    boxShadow: isActive
+                      ? "0 4px 14px rgba(0, 0, 0, 0.10)"
+                      : "0 2px 8px rgba(0, 0, 0, 0.04)",
+                    boxSizing: "border-box",
+                    cursor: "pointer",
+                    transform: isActive ? "translateY(-2px)" : "none",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: "0 0 8px 0",
+                      fontSize: "14px",
+                      color: "#374151",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {item.status}
+                  </p>
+
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: "30px",
+                      lineHeight: "1",
+                    }}
+                  >
+                    {item.total}
+                  </h3>
+                </div>
+              );
+            })}
           </div>
 
           {/* Quadro estilo Kanban */}
@@ -567,6 +1022,19 @@ function App() {
         </div>
       )}
 
+      {/* Modal de filtros avançados */}
+      <AdvancedFiltersModal
+        isOpen={isAdvancedFiltersOpen}
+        onClose={handleCloseAdvancedFilters}
+        filtersDraft={advancedFiltersDraft}
+        onChangeFilter={handleChangeAdvancedFilter}
+        onAddFilter={handleAddAdvancedFilter}
+        onRemoveFilter={handleRemoveAdvancedFilter}
+        onApplyFilters={handleApplyAdvancedFilters}
+        onClearFilters={handleClearAdvancedFilters}
+        statusOptions={STATUS_ORDER}
+      />
+
       {/* Modal de login administrativo */}
       <LoginAdminModal
         isOpen={isLoginModalOpen}
@@ -598,4 +1066,4 @@ function App() {
   );
 }
 
-export default App;
+export default App; 

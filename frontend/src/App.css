@@ -1,42 +1,207 @@
+/* Reset básico para evitar espaçamentos inesperados */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
 #root {
-  max-width: 1280px;
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Fundo geral da aplicação */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f8fafc;
+  color: #1f2937;
+}
+
+/* Container principal */
+.container {
+  width: 100%;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  padding: 24px;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Garante que a área do dashboard ocupe toda a largura */
+.dashboard-container {
+  width: 100%;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* Cabeçalho principal */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.page-title {
+  margin: 0 0 8px 0;
+  font-size: 3rem;
+  font-weight: 700;
+  color: #24364b;
+}
+
+.page-subtitle {
+  margin: 0;
+  color: #555;
+  font-size: 1rem;
+}
+
+/* Botões padrão */
+.btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background-color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background-color: #f8fafc;
+}
+
+.btn-primary {
+  border: none;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-danger {
+  border: none;
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background-color: #dc2626;
+}
+
+/* Área de filtros da praça */
+.praca-section {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.praca-title {
+  margin: 0 0 12px 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #24364b;
+}
+
+.praca-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.praca-button-active {
+  background-color: #dbeafe;
+}
+
+/* Linha de ações */
+.actions-row {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Painel inicial */
+.dashboard-summary {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.dashboard-summary h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #24364b;
+}
+
+.dashboard-summary p {
+  margin: 0;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* Métricas */
+.metrics-container {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  width: 100%;
+  margin-top: 24px;
+}
+
+.metric-card {
+  background-color: #ffffff;
+  border-radius: 14px;
+  padding: 18px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  min-height: 110px;
+}
+
+.metric-label {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.metric-value {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1;
+  color: #24364b;
+}
+
+/* Responsividade das métricas */
+@media (max-width: 1200px) {
+  .metrics-container {
+    grid-template-columns: repeat(3, 1fr);
   }
-  to {
-    transform: rotate(360deg);
+}
+
+@media (max-width: 768px) {
+  .metrics-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .page-title {
+    font-size: 2.2rem;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+@media (max-width: 520px) {
+  .metrics-container {
+    grid-template-columns: 1fr;
   }
-}
 
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
+  .container {
+    padding: 16px;
+  }
+} 
