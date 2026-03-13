@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    container_name: service-tracker-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ADMIN_PASSWORD=troque_essa_senha
+      - DATABASE_URL=sqlite:////app/data/app.db
+    volumes:
+      - sqlite_data:/app/data
+
+  frontend:
+    build: ./frontend
+    container_name: service-tracker-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  sqlite_data:

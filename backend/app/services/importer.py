@@ -107,6 +107,32 @@ def limpar_nome_fornecedor(valor: object) -> str | None:
 
     return texto or None
 
+def normalizar_praca(valor: object) -> str | None:
+    """
+    Normaliza a praça conforme a regra do projeto.
+
+    Regras:
+    - 'Brasil' passa a ser 'Escritório';
+    - 'Escritório' original da planilha não deve ser importado;
+    - valores vazios retornam None;
+    - demais valores são mantidos.
+    """
+    praca = normalizar_texto(valor)
+
+    if praca is None:
+        return None
+
+    praca_normalizada = praca.strip().lower()
+
+    # Não importar o "Escritório" original da planilha
+    if praca_normalizada in {"escritório", "escritorio"}:
+        return None
+
+    # "Brasil" deve aparecer no sistema como "Escritório"
+    if praca_normalizada == "brasil":
+        return "Escritório"
+
+    return praca
 
 def normalizar_status(
     status_original: object,
@@ -291,13 +317,20 @@ def montar_objeto_service(
     """
     Converte uma linha da planilha em um objeto Service.
 
-    Regra:
+    Regras:
     - se não houver ticket, a linha é descartada;
-    - os demais campos podem ser nulos.
+    - se a praça for o "Escritório" original da planilha, a linha é descartada;
+    - se a praça for "Brasil", ela passa a ser "Escritório".
     """
     ticket = normalizar_texto(linha.get("ticket"))
 
     if ticket is None:
+        return None
+
+    praca = normalizar_praca(linha.get("praca"))
+
+    # Se a regra da praça mandar ignorar, a linha não é importada
+    if praca is None:
         return None
 
     location_data = tratar_local_atendimento(linha.get("raw_location"))
@@ -317,7 +350,7 @@ def montar_objeto_service(
         store_name=location_data["store_name"],
         bpcs_number=location_data["bpcs_number"],
         sap_number=location_data["sap_number"],
-        praca=normalizar_texto(linha.get("praca")),
+        praca=praca,
         service_description=normalizar_texto(linha.get("service_description")),
         supplier=supplier,
         visit_date=visit_date,
@@ -377,3 +410,4 @@ def importar_servicos(
         "upload_data": upload.uploaded_at,
         "source_file_name": upload.source_file_name,
     }
+

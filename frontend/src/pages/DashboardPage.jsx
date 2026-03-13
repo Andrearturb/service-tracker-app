@@ -21,6 +21,7 @@ import logoGentil from "../assets/logo-gentil.png";
 import logoManutencao from "../assets/logo-manutencao.png";
 
 function DashboardPage() {
+  const KANBAN_COLUMNS = "repeat(5, minmax(260px, 1fr))";
   // Dados principais
   const [services, setServices] = useState([]);
   const [pracas, setPracas] = useState([]);
@@ -749,9 +750,9 @@ function DashboardPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gridTemplateColumns: KANBAN_COLUMNS,
               gap: "16px",
-              marginBottom: "24px",
+              marginBottom: "12px",
               width: "100%",
             }}
           >
@@ -808,8 +809,9 @@ function DashboardPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(5, minmax(260px, 1fr))",
+              gridTemplateColumns: KANBAN_COLUMNS,
               gap: "16px",
+              marginTop: "0",
               alignItems: "start",
               width: "100%",
               boxSizing: "border-box",

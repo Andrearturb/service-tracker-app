@@ -1,8 +1,5 @@
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "/api";
 
-/**
- * Busca os dados públicos do dashboard.
- */
 export async function fetchServicesData() {
   const response = await fetch(`${API_BASE_URL}/services`);
 
@@ -13,9 +10,6 @@ export async function fetchServicesData() {
   return response.json();
 }
 
-/**
- * Faz login administrativo.
- */
 export async function adminLogin(password) {
   const response = await fetch(`${API_BASE_URL}/admin/login`, {
     method: "POST",
@@ -34,9 +28,6 @@ export async function adminLogin(password) {
   return data;
 }
 
-/**
- * Envia planilha para importação.
- */
 export async function importExcelFile(file, adminToken) {
   const formData = new FormData();
   formData.append("file", file);
@@ -49,11 +40,18 @@ export async function importExcelFile(file, adminToken) {
     body: formData,
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get("content-type") || "";
 
-  if (!response.ok) {
-    throw new Error(data.detail || "Erro ao importar planilha.");
+  if (contentType.includes("application/json")) {
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || "Erro ao importar planilha.");
+    }
+
+    return data;
   }
 
-  return data;
+  const text = await response.text();
+  throw new Error(`Resposta inesperada do servidor: ${text.slice(0, 120)}`);
 }

@@ -5,23 +5,19 @@ Este módulo cria a conexão principal com o banco, define a fábrica de
 sessões e disponibiliza uma função auxiliar para uso nas rotas da API.
 """
 
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-from app.core.config import DATABASE_URL
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
 
-# Cria a conexão principal com o banco de dados
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},
-)
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
 
-# Cria uma fábrica de sessões para interação com o banco
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine,
-)
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
 
 def get_db():
