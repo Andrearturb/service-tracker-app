@@ -1,14 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import AdvancedFiltersModal from "../components/AdvancedFiltersModal";
-import ImportModal from "../components/ImportModal";
-import LoginAdminModal from "../components/LoginAdminModal";
 import ServiceDetailsModal from "../components/ServiceDetailsModal";
 import { STATUS_COLORS, STATUS_ORDER } from "../constants/status";
-import {
-  adminLogin,
-  fetchServicesData,
-  importExcelFile,
-} from "../services/api";
+import {fetchServicesData} from "../services/api";
 import {
   buildGlobalStatusMetrics,
   buildStatusMetrics,
@@ -39,19 +33,7 @@ function DashboardPage() {
   // Modal de detalhes
   const [selectedService, setSelectedService] = useState(null);
 
-  // Área administrativa
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [adminPassword, setAdminPassword] = useState("");
-  const [loginMessage, setLoginMessage] = useState("");
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [adminToken, setAdminToken] = useState(
-    sessionStorage.getItem("admin_token") || ""
-  );
-  const [importMessage, setImportMessage] = useState("");
-  const [isImporting, setIsImporting] = useState(false);
-
+ 
   /**
    * Busca os dados atualizados do backend.
    */
@@ -284,91 +266,7 @@ function DashboardPage() {
     setIsAdvancedFiltersOpen(false);
   }
 
-  /**
-   * Fecha modal de login.
-   */
-  function handleCloseLoginModal() {
-    setIsLoginModalOpen(false);
-    setLoginMessage("");
-  }
 
-  /**
-   * Fecha modal de importação.
-   */
-  function handleCloseImportModal() {
-    setIsImportModalOpen(false);
-    setImportMessage("");
-  }
-
-  /**
-   * Faz login administrativo.
-   */
-  async function handleAdminLogin() {
-    if (!adminPassword.trim()) {
-      setLoginMessage("Informe a senha administrativa.");
-      return;
-    }
-
-    try {
-      setIsLoggingIn(true);
-      setLoginMessage("Validando acesso...");
-
-      const data = await adminLogin(adminPassword.trim());
-
-      sessionStorage.setItem("admin_token", data.token);
-      setAdminToken(data.token);
-      setAdminPassword("");
-      setLoginMessage("");
-      setIsLoginModalOpen(false);
-      setIsImportModalOpen(true);
-    } catch (error) {
-      setLoginMessage(String(error.message || error));
-    } finally {
-      setIsLoggingIn(false);
-    }
-  }
-
-  /**
-   * Importa planilha e recarrega o painel.
-   */
-  async function handleImportFile() {
-    if (!selectedFile) {
-      setImportMessage("Selecione um arquivo antes de importar.");
-      return;
-    }
-
-    if (!adminToken) {
-      setImportMessage("Acesso administrativo não autorizado.");
-      return;
-    }
-
-    try {
-      setIsImporting(true);
-      setImportMessage("Importando planilha...");
-
-      await importExcelFile(selectedFile, adminToken);
-
-      setImportMessage("Planilha importada com sucesso.");
-      await loadServicesData();
-      setSelectedFile(null);
-      setSelectedService(null);
-    } catch (error) {
-      setImportMessage(String(error.message || error));
-    } finally {
-      setIsImporting(false);
-    }
-  }
-
-  /**
-   * Abre a área administrativa.
-   */
-  function handleOpenAdminArea() {
-    if (adminToken) {
-      setIsImportModalOpen(true);
-    } else {
-      setIsLoginModalOpen(true);
-    }
-  }
 
   return (
     <div
@@ -463,30 +361,7 @@ function DashboardPage() {
         </div>
       </div>
 
-      {/* Botão administrativo fora do fundo do header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          marginBottom: "24px",
-        }}
-      >
-        <button
-          onClick={handleOpenAdminArea}
-          style={{
-            padding: "10px 16px",
-            borderRadius: "10px",
-            border: "none",
-            backgroundColor: "#2563eb",
-            color: "#ffffff",
-            cursor: "pointer",
-            fontWeight: "700",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
-          }}
-        >
-          Área administrativa
-        </button>
-      </div>
+
 
       {/* Praça */}
       <h2 style={{ marginBottom: "12px" }}>Selecione uma praça</h2>
@@ -994,26 +869,6 @@ function DashboardPage() {
         onApplyFilters={handleApplyAdvancedFilters}
         onClearFilters={handleClearAdvancedFilters}
         statusOptions={STATUS_ORDER}
-      />
-
-      <LoginAdminModal
-        isOpen={isLoginModalOpen}
-        onClose={handleCloseLoginModal}
-        password={adminPassword}
-        onPasswordChange={setAdminPassword}
-        onLogin={handleAdminLogin}
-        loginMessage={loginMessage}
-        isLoggingIn={isLoggingIn}
-      />
-
-      <ImportModal
-        isOpen={isImportModalOpen}
-        onClose={handleCloseImportModal}
-        selectedFile={selectedFile}
-        onFileChange={setSelectedFile}
-        onImport={handleImportFile}
-        importMessage={importMessage}
-        isImporting={isImporting}
       />
 
       <ServiceDetailsModal

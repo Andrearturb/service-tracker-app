@@ -9,7 +9,7 @@ A importação é protegida por autenticação administrativa.
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.core.config import ADMIN_TOKEN
+from app.core.config import API_KEY
 from app.db.session import get_db
 from app.schemas.upload import UploadResponse
 from app.services.importer import importar_servicos
@@ -17,33 +17,17 @@ from app.services.importer import importar_servicos
 router = APIRouter(prefix="/imports", tags=["Imports"])
 
 
-def validar_token_admin(authorization: str | None) -> None:
-    """
-    Valida o token administrativo enviado no header Authorization.
-
-    Formato esperado:
-    Authorization: Bearer <token>
-    """
-    if not authorization:
+def validar_api_key(x_api_key: str | None) -> None:
+    if not x_api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token administrativo não informado.",
+            detail="API Key não informada.",
         )
 
-    prefix = "Bearer "
-
-    if not authorization.startswith(prefix):
+    if x_api_key != API_KEY:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Formato do token inválido.",
-        )
-
-    token = authorization[len(prefix):].strip()
-
-    if token != ADMIN_TOKEN:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token administrativo inválido.",
+            detail="API Key inválida.",
         )
 
 
@@ -54,7 +38,7 @@ def validar_token_admin(authorization: str | None) -> None:
 )
 async def importar_planilha_excel(
     file: UploadFile = File(...),
-    authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None),
     db: Session = Depends(get_db),
 ) -> UploadResponse:
     """
@@ -66,7 +50,7 @@ async def importar_planilha_excel(
     - lê o conteúdo do arquivo;
     - delega o tratamento e a persistência para o serviço de importação.
     """
-    validar_token_admin(authorization)
+    validar_api_key(x_api_key)
 
     if not file.filename:
         raise HTTPException(

@@ -11,7 +11,4 @@ APP_VERSION = "0.1.0"
 DATABASE_URL = "sqlite:///./services.db"
 
 # Senha usada para acessar a área administrativa
-ADMIN_PASSWORD = "admin123"
-# Token simples retornado após login administrativo
-# Em uma versão futura, isso pode virar JWT ou outro mecanismo mais robusto.
-ADMIN_TOKEN = "service-tracker-admin-token"
+API_KEY = "minha-chave-secreta"  # Em produção, use uma variável de ambiente ou um gerenciador de segredos
