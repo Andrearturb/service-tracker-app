@@ -6,3 +6,4 @@ sqlalchemy
 python-multipart
 jinja2
 alembic
+psycopg[binary]

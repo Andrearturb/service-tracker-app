@@ -9,7 +9,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from app.api.routes.admin import router as admin_router
 from app.api.routes.health import router as health_router
 from app.api.routes.imports import router as imports_router
 from app.api.routes.services import router as services_router
@@ -56,7 +55,7 @@ def on_startup() -> None:
 
 
 # Registro das rotas da aplicação
-app.include_router(admin_router)
+
 app.include_router(health_router)
 app.include_router(imports_router)
 app.include_router(services_router)

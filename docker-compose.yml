@@ -1,16 +1,26 @@
-version: "3.9"
-
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: service-tracker-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   backend:
     build: ./backend
     container_name: service-tracker-backend
     ports:
       - "8000:8000"
     environment:
-      - ADMIN_PASSWORD=troque_essa_senha
-      - DATABASE_URL=sqlite:////app/data/app.db
-    volumes:
-      - sqlite_data:/app/data
+      - DATABASE_URL=${DATABASE_URL}
+      - API_KEY=${API_KEY}
+    depends_on:
+      - db
 
   frontend:
     build: ./frontend
@@ -21,4 +31,5 @@ services:
       - backend
 
 volumes:
-  sqlite_data:
+  postgres_data:
+    name: service-tracker-postgres-data
