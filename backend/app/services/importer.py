@@ -411,3 +411,45 @@ def importar_servicos(
         "source_file_name": upload.source_file_name,
     }
 
+def importar_servicos_json(
+    db: Session,
+    items: list[dict[str, object]],
+    source_name: str | None,
+) -> dict[str, object]:
+    """
+    Executa a importação completa a partir de uma lista JSON.
+
+    Fluxo:
+    1. cria o registro de upload;
+    2. monta os objetos válidos;
+    3. apaga os serviços antigos;
+    4. salva a nova carga;
+    5. retorna um resumo da importação.
+    """
+    upload = Upload(
+        source_file_name=source_name,
+        total_rows=0,
+    )
+    db.add(upload)
+    db.flush()
+
+    services: list[Service] = []
+
+    for linha in items:
+        service = montar_objeto_service(linha, upload.id)
+        if service is not None:
+            services.append(service)
+
+    upload.total_rows = len(services)
+
+    db.query(Service).delete()
+    db.add_all(services)
+    db.commit()
+    db.refresh(upload)
+
+    return {
+        "message": "Importação JSON concluída com sucesso.",
+        "total_rows": upload.total_rows,
+        "upload_data": upload.uploaded_at,
+        "source_file_name": upload.source_file_name,
+    }

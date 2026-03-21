@@ -1,0 +1,35 @@
+[
+  {
+    "id": "12345",
+    "status": "Em aberto",
+    "local": "Ceará-Mirim | BCPS: 21270 | SAP: 4052",
+    "praca": "Brasil",
+    "descricao": "Troca de equipamento",
+    "fornecedor": "Fornecedor XPTO - CNPJ: 12.345.678/0001-90",
+    "data_visita": "2026-03-20T10:00:00",
+    "solucao": "Em análise",
+    "criado_em": "2026-03-19T08:30:00"
+  },
+  {
+    "id": "12346",
+    "status": "Em atendimento",
+    "local": "Natal | BCPS: 10001 | SAP: 5001",
+    "praca": "Natal",
+    "descricao": "Manutenção elétrica",
+    "fornecedor": "Eletricidade Silva - CPF: 123.456.789-00",
+    "data_visita": null,
+    "solucao": "Aguardando visita",
+    "criado_em": "2026-03-19T09:00:00"
+  },
+  {
+    "id": "12347",
+    "status": "Solicitação finalizada",
+    "local": "Mossoró | BCPS: 10002 | SAP: 5002",
+    "praca": "Mossoró",
+    "descricao": "Reparo hidráulico",
+    "fornecedor": "Hidrotec Serviços",
+    "data_visita": "2026-03-18T14:00:00",
+    "solucao": "Serviço concluído",
+    "criado_em": "2026-03-18T08:00:00"
+  }
+]
