@@ -7,27 +7,38 @@ ARQUIVO_MOCK = "mock_tape_response.json"
 
 
 def buscar_dados_origem() -> list[dict]:
+    """
+    Hoje lê um arquivo mock local.
+    Futuramente, esta função poderá consultar diretamente a API do TAPE.
+    """
     with open(ARQUIVO_MOCK, "r", encoding="utf-8") as arquivo:
         return json.load(arquivo)
+        # Exemplo futuro:
+    # response = requests.get(
+    #     "URL_DA_API_DO_TAPE",
+    #     headers={
+    #         "Authorization": "Bearer TOKEN_DO_TAPE"
+    #     },
+    #     timeout=120,
+    # )
+    # response.raise_for_status()
+    # return response.json()
 
-    #response = requests.get(
-        #"URL_DA_API_DO_TAPE",
-        #headers={
-            #"Authorization": "Bearer TOKEN_DO_TAPE"
-        #},
-        #timeout=120,
-    #)
-    #response.raise_for_status()
-    #return response.json()
 
 def transformar_para_service_tracker(dados_origem: list[dict]) -> dict:
+    """
+    Converte os dados da origem para o formato esperado pelo Service Tracker.
+
+    Quando a estrutura do TAPE for diferente, este é o ponto onde faremos
+    o mapeamento dos campos da API externa para o formato interno.
+
+    Exemplo:
+    "ticket": str(item.get("id", ""))
+    pode virar:
+    "ticket": str(item.get("idTicket", ""))
+    """
     items = []
-    #quando a estrutura do TAPE for diferente, aqui é onde faremos as adaptações para o formato esperado pelo Service Tracker
-    #exemplo de mapeamento:
-    #  "ticket": str(item.get("id", ""))
-    #  para:
-    #  "ticket": str(item.get("o que tiver no tape", "")),
-    
+
     for item in dados_origem:
         items.append(
             {
@@ -51,18 +62,25 @@ def transformar_para_service_tracker(dados_origem: list[dict]) -> dict:
 
 
 def enviar_para_backend(payload: dict) -> None:
-    response = requests.post(
-        API_URL,
-        headers={
-            "x-api-key": API_KEY,
-            "Content-Type": "application/json",
-        },
-        json=payload,
-        timeout=120,
-    )
+    """
+    Envia os dados transformados para o backend.
+    """
+    try:
+        response = requests.post(
+            API_URL,
+            headers={
+                "x-api-key": API_KEY,
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=120,
+        )
 
-    print("Status:", response.status_code)
-    print("Resposta:", response.text)
+        print("Status:", response.status_code)
+        print("Resposta:", response.text)
+
+    except requests.RequestException as erro:
+        print("Erro ao enviar para o backend:", erro)
 
 
 if __name__ == "__main__":
