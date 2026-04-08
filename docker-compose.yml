@@ -10,6 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: always
 
   backend:
     build: ./backend
@@ -21,6 +22,8 @@ services:
       - API_KEY=${API_KEY}
     depends_on:
       - db
+    command: sh -c "sleep 5 && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    restart: always
 
   frontend:
     build: ./frontend
@@ -29,6 +32,7 @@ services:
       - "5173:80"
     depends_on:
       - backend
+    restart: always
 
 volumes:
   postgres_data:
